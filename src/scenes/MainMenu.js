@@ -1,4 +1,5 @@
 import { Container, Sprite, Assets, Text, TextStyle, Graphics } from 'pixi.js';
+import { MainStage } from './MainStage.js';
 
 export class MainMenu {
     constructor(app) {
@@ -11,7 +12,6 @@ export class MainMenu {
         const backgroundTexture = await Assets.load('images/titleScreen.png');
         const background = new Sprite(backgroundTexture);
 
-      
         await Assets.load({
             src: 'fonts/Lunar_Escape.otf',
             data: {
@@ -78,9 +78,21 @@ export class MainMenu {
             button.scale.set(1);
         });
 
+        const startLevel = async () => {
+            this.container.removeChildren();
+            this.app.renderer.background.color = 0x000000; // Change background color for the main stage
+            const mainStage = new MainStage(this.app);
+            await mainStage.init();
+            this.container.addChild(mainStage.container);
+            /* this.container.addChild(background);
+            this.container.addChild(text);
+            this.container.addChild(button); */
+        };
+
         button.on('pointerdown', () => {
             console.log('Start Button Clicked! Time to shift scenes.');
             // add change scene code for here later
+            startLevel();
         });
 
         
