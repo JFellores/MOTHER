@@ -12,6 +12,9 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@pixi/devtools": "^2.0.1",
+    "@pixi/loaders": "^6.5.10",
+    "@pixi/tilemap": "^5.0.2",
     "pixi.js": "^8.18.1"
   },
   "devDependencies": {
