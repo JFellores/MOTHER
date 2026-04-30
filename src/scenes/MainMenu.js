@@ -1,4 +1,4 @@
-import { Container, Sprite, Assets, Text, TextStyle, Graphics } from 'pixi.js';
+import { Container, Sprite, Assets, Text, TextStyle, Graphics, Rectangle } from 'pixi.js';
 import { MainStage } from './MainStage.js';
 
 export class MainMenu {
@@ -47,6 +47,7 @@ export class MainMenu {
         buttonBg.stroke({ width: 4, color: 0xb85d13 });
 
         button.addChild(buttonBg);
+        button.hitArea = new Rectangle(-btnWidth / 2, -btnHeight / 2, btnWidth, btnHeight);
         
         const buttonText = new Text({
             text: 'START GAME',
@@ -79,11 +80,11 @@ export class MainMenu {
         });
 
         const startLevel = async () => {
-            this.container.removeChildren();
+            this.app.stage.removeChildren();
             this.app.renderer.background.color = 0x000000; // Change background color for the main stage
             const mainStage = new MainStage(this.app);
             await mainStage.init();
-            this.container.addChild(mainStage.container);
+            this.app.stage.addChild(mainStage.container);
             /* this.container.addChild(background);
             this.container.addChild(text);
             this.container.addChild(button); */
@@ -102,7 +103,6 @@ export class MainMenu {
         text.y = this.app.screen.height * 0.27;
         
         background.anchor.set(0.5);
-        background.background.color = 0x12321312;
         // position
         background.x = this.app.screen.width / 2;
         background.y = this.app.screen.height / 2;
