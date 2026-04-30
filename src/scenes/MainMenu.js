@@ -90,7 +90,7 @@ export class MainMenu {
         text.y = this.app.screen.height * 0.27;
         
         background.anchor.set(0.5);
-
+        background.background.color = 0x12321312;
         // position
         background.x = this.app.screen.width / 2;
         background.y = this.app.screen.height / 2;
