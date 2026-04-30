@@ -17,6 +17,5 @@ import { MainMenu } from '../scenes/MainMenu.js';
     await menu.init();
     
     app.stage.addChild(menu.container);
-
-
+    
 })();
