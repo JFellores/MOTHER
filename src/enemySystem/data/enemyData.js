@@ -21,7 +21,7 @@ export const ENEMY_DATA = {
         health: 50,
         speed: 60,
         sprite: '/enemySprites/enemy-2-idle-Sheet.png',
-        frameCount: 5,
+        frameCount: 7,
         special: null,
         //partsDrop: 25
         //specialMove = {}
@@ -33,7 +33,7 @@ export const ENEMY_DATA = {
         health: 30,
         speed: 140,
         sprite: '/enemySprites/enemy-3-idle-Sheet.png',
-        frameCount: 5,
+        frameCount: 4,
         special: null,
         //partsDrop: 15
         //specialMove = {}
