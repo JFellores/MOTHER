@@ -1,7 +1,6 @@
 import { Container } from 'pixi.js';
 import { Player } from '../entities/player.js';
-import { Tilemap } from '@pixi/tilemap';
-import { Loader } from '@pixi/loaders';
+import SpawnerSystem from '../enemySystem/systems/spawnerSystem.js';
 
 
 export class MainStage {
@@ -9,8 +8,7 @@ export class MainStage {
         this.app = app;
         this.container = new Container();
         this.player = new Player(app);
-
-        Loader.shared.add('', '');
+        this.spawnerSystem = new SpawnerSystem(app, this.container, this.player);
     }
 
     
@@ -25,9 +23,12 @@ export class MainStage {
         await this.player.init();
         this.container.addChild(this.player.sprite);
 
+        await this.spawnerSystem.init();
+
         window.addEventListener('keydown', this.player.onKeyDown);
         window.addEventListener('keyup', this.player.onKeyUp);
         window.addEventListener('pointermove', this.player.onPointerMove);
         this.app.ticker.add(this.player.updateMovement);
+        this.app.ticker.add(this.spawnerSystem.update);
     }
 }
