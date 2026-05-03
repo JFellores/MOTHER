@@ -8,6 +8,7 @@ export class MainStage {
         this.app = app;
         this.container = new Container();
         this.player = new Player(app);
+        this.player.setSceneContainer(this.container);
         this.spawnerSystem = new SpawnerSystem(app, this.container, this.player);
     }
 
@@ -28,6 +29,8 @@ export class MainStage {
         window.addEventListener('keydown', this.player.onKeyDown);
         window.addEventListener('keyup', this.player.onKeyUp);
         window.addEventListener('pointermove', this.player.onPointerMove);
+        window.addEventListener('pointerdown', this.player.onPointerDown);
+        window.addEventListener('pointerup', this.player.onPointerUp);
         this.app.ticker.add(this.player.updateMovement);
         this.app.ticker.add(this.spawnerSystem.update);
     }
