@@ -1,0 +1,41 @@
+{
+  "frames": {
+    "top-left": {
+      "frame": {"x":0,"y":0,"w":16,"h":16},
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {"x":0,"y":0,"w":16,"h":16},
+      "sourceSize": {"w":16,"h":16}
+    },
+    "top-right": {
+      "frame": {"x":16,"y":0,"w":16,"h":16},
+      "rotated": false, "trimmed": false,
+      "spriteSourceSize": {"x":0,"y":0,"w":16,"h":16},
+      "sourceSize": {"w":16,"h":16}
+    },
+    "bottom-left": {
+      "frame": {"x":32,"y":0,"w":16,"h":16},
+      "rotated": false, "trimmed": false,
+      "spriteSourceSize": {"x":0,"y":0,"w":16,"h":16},
+      "sourceSize": {"w":16,"h":16}
+    },
+    "bottom-right": {
+      "frame": {"x":48,"y":0,"w":16,"h":16},
+      "rotated": false, "trimmed": false,
+      "spriteSourceSize": {"x":0,"y":0,"w":16,"h":16},
+      "sourceSize": {"w":16,"h":16}
+    },
+    "normal_floor": {
+      "frame": {"x":0,"y":16,"w":16,"h":16},
+      "rotated": false, "trimmed": false,
+      "spriteSourceSize": {"x":0,"y":0,"w":16,"h":16},
+      "sourceSize": {"w":16,"h":16}
+    }
+  },
+  "meta": {
+    "app": "texturepacker",
+    "image": "tilemap-2.png",
+    "size": {"w":64,"h":32},
+    "scale": "1"
+  }
+}

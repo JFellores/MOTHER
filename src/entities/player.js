@@ -105,7 +105,7 @@ export class Player {
 
         this.sprite = new AnimatedSprite(this.idleFrames);
         this.sprite.anchor.set(0.5);
-        this.sprite.scale.set(2);
+        this.sprite.scale.set(1);
         this.sprite.x = this.app.screen.width / 2;
         this.sprite.y = this.app.screen.height / 2;
         this.sprite.rotation = 0;

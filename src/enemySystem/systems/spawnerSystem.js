@@ -76,7 +76,7 @@ export default class SpawnerSystem {
         if (!enemy.spriteView) {
             enemy.spriteView = new Sprite(texture);
             enemy.spriteView.anchor.set(0.5);
-            enemy.spriteView.scale.set(2);
+            enemy.spriteView.scale.set(1);
         } else {
             enemy.spriteView.texture = texture;
         }

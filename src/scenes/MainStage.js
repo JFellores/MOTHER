@@ -12,7 +12,10 @@ export class MainStage {
         this.player.setSceneContainer(this.container);
         this.spawnerSystem = new SpawnerSystem(app, this.container, this.player);
         this.tilemapManager = new TilemapManager(this.container, {
-            tilesetPath: 'public/tileMaps/tilemap-2.png',
+            mapWidth: app.screen.width,
+            mapHeight: app.screen.height,
+            tilesetPath: '/tileMaps/tilemap-2.png',
+            tilesetAtlasPath: '/tileMaps/tilemap.json',
             tileSize: 16,
             tileMapping: {
                 'top-left': { x: 0, y: 0 },      
@@ -21,15 +24,13 @@ export class MainStage {
                 'bottom-right': { x: 3, y: 0 }, 
                 'normal_floor': { x: 0, y: 1 },
             },
-            tileData: [
-                ['top-left', 'top-right', 'bottom-left', 'bottom-right'],
-                ['normal_floor'],
-            ]
+            randomTiles: ['normal_floor', 'top-left', 'top-right', 'bottom-left', 'bottom-right' ]
         });
+        this.app.renderer.background.color = '#413447'; 
     }
 
     async init() {
-        await this.tilemapManager.init();
+        await this.tilemapManager.init(this.app.screen.width, this.app.screen.height);
         
         await this.player.init();
         this.container.addChild(this.player.sprite);
@@ -43,6 +44,6 @@ export class MainStage {
         window.addEventListener('pointerup', this.player.onPointerUp);
         this.app.ticker.add(this.player.updateMovement);
         this.app.ticker.add(this.spawnerSystem.update);
-        this.app.ticker.add(this.tilemapManager.update.bind(this.tilemapManager));
+       /*  this.app.ticker.add(this.tilemapManager.update.bind(this.tilemapManager)); */
     }
 }
