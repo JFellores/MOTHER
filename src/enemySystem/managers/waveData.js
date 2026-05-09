@@ -15,5 +15,10 @@ export const WAVE_TIMELINE = [
         time: 30,
         type: ENEMY_TYPES.ORB,
         interval: 7
+    },
+    {
+        time: 30,
+        type: ENEMY_TYPES.RHINO,
+        interval: 10
     }
 ];

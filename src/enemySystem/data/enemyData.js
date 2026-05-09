@@ -32,7 +32,18 @@ export const ENEMY_DATA = {
         type: ENEMY_TYPES.ORB,
         health: 30,
         speed: 140,
-        sprite: '/enemySprites/enemy-3-2-idle-Sheet.png',
+        sprite: '/enemySprites/enemy-3-idle-Sheet.png',
+        frameCount: 4,
+        special: null,
+        //partsDrop: 15
+        //specialMove = {}
+        //add more properties as needed, like attack patterns, damage, etc.
+    },
+    [ENEMY_TYPES.RHINO]: {
+        type: ENEMY_TYPES.RHINO,
+        health: 100,
+        speed: 50,
+        sprite: '/enemySprites/enemy-4-idle-Sheet.png',
         frameCount: 6,
         special: null,
         //partsDrop: 15
