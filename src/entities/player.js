@@ -1,4 +1,5 @@
-import { AnimatedSprite, Assets, Rectangle, Sprite, Texture } from 'pixi.js';
+import { AnimatedSprite, Assets, Rectangle, Texture } from 'pixi.js';
+import Projectile from './projectile.js';
 
 export class Player {
     constructor(app) {
@@ -6,21 +7,28 @@ export class Player {
         this.sprite = null;
         this.idleFrames = [];
         this.attackFrames = [];
-        this.basicAttackFrames = [];
         this.isAttacking = false;
-        this.basicAttacks = [];
-        this.basicAttack = null;
+        this.projectiles = [];
+        this.activeProjectile = null;
         this.idleAnimationSpeed = 0.08;
         this.attackAnimationSpeed = 0.4;
-        this.basicAttackTexturePath = '/projectileSprites/player-basic-attack.png';
-        this.basicAttackFrameCount = 4;
-        this.basicAttackChargeTime = 0.5;
-        this.basicAttackLifetime = 3;
-        this.basicAttackLaunchSpeed = 350;
-        this.basicAttackSpinSpeed = 10;
-        this.basicAttackHoldOffset = 18;
-        this.basicAttackScale = 2;
+        this.attackAnimationDuration = 0.35;
+        this.attackAnimationTimeLeft = 0;
         this.moveSpeed = 4;
+        this.hitbox = null;
+        this.projectileFrames = [];
+        this.projectileConfig = {
+            texturePath: '/projectileSprites/player-basic-attack.png',
+            frameCount: 4,
+            chargeTime: 0.5,
+            lifetime: 3,
+            launchSpeed: 350,
+            spinSpeed: 10,
+            holdOffset: 18,
+            scale: 2,
+            damage: 10
+        };
+
         this.mousePosition = {
             x: 0,
             y: 0,
@@ -53,11 +61,11 @@ export class Player {
         this.onPointerDown = () => {
             if (!this.sprite || this.isAttacking) return;
 
-            this.startBasicAttack();
+            this.startProjectile();
         };
 
         this.onPointerUp = () => {
-            this.releaseBasicAttack();
+            this.releaseProjectile();
         };
 
         this.updateMovement = (ticker) => {
@@ -86,7 +94,11 @@ export class Player {
                 this.sprite.rotation = Math.atan2(dy, dx) + Math.PI / 2;
             }
 
-            this.updateBasicAttack(delta);
+            this.updateAttackAnimation(delta);
+
+            this.hitbox = this.sprite.getBounds();
+
+            this.updateProjectiles(delta);
         };
     }
 
@@ -97,11 +109,11 @@ export class Player {
     async init() {
         const idleTexture = await Assets.load('/playerSprites/player-idle-Sheet.png');
         const attackTexture = await Assets.load('/playerSprites/player-attack-Sheet.png');
-        const basicAttackTexture = await Assets.load(this.basicAttackTexturePath);
+        const projectileTexture = await Assets.load(this.projectileConfig.texturePath);
 
         this.idleFrames = this.createFrames(idleTexture, 4);
         this.attackFrames = this.createFrames(attackTexture, 9);
-        this.basicAttackFrames = this.createFrames(basicAttackTexture, this.basicAttackFrameCount);
+        this.projectileFrames = this.createFrames(projectileTexture, this.projectileConfig.frameCount);
 
         this.sprite = new AnimatedSprite(this.idleFrames);
         this.sprite.anchor.set(0.5);
@@ -112,93 +124,73 @@ export class Player {
         this.sprite.animationSpeed = this.idleAnimationSpeed;
         this.sprite.loop = true;
         this.sprite.gotoAndPlay(0);
+        this.hitbox = this.sprite.getBounds();
     }
 
-    startBasicAttack() {
-        if (this.basicAttack || this.basicAttackFrames.length === 0 || !this.sprite) return;
+    startProjectile() {
+        if (this.activeProjectile || this.projectileFrames.length === 0 || !this.sprite) return;
 
-        const mouthPosition = this.getMouthPosition(this.basicAttackHoldOffset);
-        const attackSprite = new Sprite(this.basicAttackFrames[0]);
+        const mouthPosition = this.getMouthPosition(this.projectileConfig.holdOffset);
 
-        attackSprite.anchor.set(0.5);
-        attackSprite.scale.set(this.basicAttackScale);
-        attackSprite.x = mouthPosition.x;
-        attackSprite.y = mouthPosition.y;
+        this.activeProjectile = new Projectile(
+            this.app,
+            this.getAttackParent(),
+            this.projectileFrames,
+            this.projectileConfig
+        );
 
-        this.getAttackParent().addChild(attackSprite);
-
-        this.basicAttack = {
-            sprite: attackSprite,
-            holdTime: 0,
-            launched: false,
-            launchDirectionX: 0,
-            launchDirectionY: 0,
-            launchTime: 0,
-            frameIndex: 0
-        };
+        this.activeProjectile.update(0, mouthPosition);
     }
 
-    releaseBasicAttack() {
-        if (!this.basicAttack || this.basicAttack.launched || !this.sprite) return;
+    releaseProjectile() {
+        if (!this.activeProjectile || !this.sprite) return;
 
         const angle = this.sprite.rotation - Math.PI / 2;
 
-        this.basicAttack.launched = true;
-        this.basicAttack.launchDirectionX = Math.cos(angle);
-        this.basicAttack.launchDirectionY = Math.sin(angle);
-        this.basicAttack.launchTime = 0;
-        this.basicAttacks.push(this.basicAttack);
-        this.basicAttack = null;
+        this.activeProjectile.release(angle);
+        this.projectiles.push(this.activeProjectile);
+        this.activeProjectile = null;
 
         if (this.attackFrames.length > 0) {
             this.isAttacking = true;
+            this.attackAnimationTimeLeft = this.attackAnimationDuration;
             this.sprite.textures = this.attackFrames;
             this.sprite.animationSpeed = this.attackAnimationSpeed;
             this.sprite.loop = false;
-            this.sprite.onComplete = () => {
-                this.sprite.textures = this.idleFrames;
-                this.sprite.animationSpeed = this.idleAnimationSpeed;
-                this.sprite.loop = true;
-                this.sprite.gotoAndPlay(0);
-                this.isAttacking = false;
-                this.sprite.onComplete = null;
-            };
             this.sprite.gotoAndPlay(0);
         }
     }
 
-    updateBasicAttack(deltaTime) {
-        const deltaSeconds = deltaTime / 60;
-        const mouthPosition = this.sprite ? this.getMouthPosition(this.basicAttackHoldOffset) : { x: 0, y: 0 };
+    updateAttackAnimation(deltaTime) {
+        if (!this.sprite || !this.isAttacking) return;
 
-        if (this.basicAttack && !this.basicAttack.launched) {
-            const attack = this.basicAttack;
+        this.attackAnimationTimeLeft -= deltaTime / 60;
 
-            attack.holdTime = Math.min(this.basicAttackChargeTime, attack.holdTime + deltaSeconds);
-            attack.frameIndex = this.getBasicAttackFrameIndex(attack.holdTime);
-            attack.sprite.texture = this.basicAttackFrames[attack.frameIndex];
-            attack.sprite.x = mouthPosition.x;
-            attack.sprite.y = mouthPosition.y;
-            attack.sprite.rotation += this.basicAttackSpinSpeed * deltaSeconds;
+        if (this.attackAnimationTimeLeft > 0) return;
+
+        this.sprite.textures = this.idleFrames;
+        this.sprite.animationSpeed = this.idleAnimationSpeed;
+        this.sprite.loop = true;
+        this.sprite.gotoAndPlay(0);
+        this.isAttacking = false;
+        this.attackAnimationTimeLeft = 0;
+        this.sprite.onComplete = null;
+    }
+
+    updateProjectiles(deltaTime) {
+        const mouthPosition = this.sprite ? this.getMouthPosition(this.projectileConfig.holdOffset) : null;
+
+        if (this.activeProjectile) {
+            this.activeProjectile.update(deltaTime, mouthPosition);
         }
 
-        if (this.basicAttacks.length === 0) return;
+        if (this.projectiles.length === 0) return;
 
-        this.basicAttacks = this.basicAttacks.filter((attack) => {
-            attack.launchTime += deltaSeconds;
-            attack.sprite.x += attack.launchDirectionX * this.basicAttackLaunchSpeed * deltaSeconds;
-            attack.sprite.y += attack.launchDirectionY * this.basicAttackLaunchSpeed * deltaSeconds;
-            attack.sprite.rotation += this.basicAttackSpinSpeed * deltaSeconds;
+        this.projectiles = this.projectiles.filter((projectile) => {
+            const alive = projectile.update(deltaTime);
 
-            const flyingFrameIndex = Math.min(
-                this.basicAttackFrames.length - 1,
-                Math.floor(attack.launchTime / 0.08)
-            );
-
-            attack.sprite.texture = this.basicAttackFrames[flyingFrameIndex];
-
-            if (attack.launchTime >= this.basicAttackLifetime || this.isBasicAttackOutOfBounds(attack.sprite)) {
-                this.destroyBasicAttack(attack);
+            if (!alive) {
+                projectile.destroy();
                 return false;
             }
 
@@ -206,27 +198,19 @@ export class Player {
         });
     }
 
-    destroyBasicAttack(attack) {
-        if (attack?.sprite?.parent) {
-            attack.sprite.parent.removeChild(attack.sprite);
+    removeProjectile(projectile) {
+        const projectileIndex = this.projectiles.indexOf(projectile);
+
+        if (projectileIndex !== -1) {
+            this.projectiles.splice(projectileIndex, 1);
         }
 
-        if (this.basicAttack === attack) {
-            this.basicAttack = null;
+        if (this.activeProjectile === projectile) {
+            this.activeProjectile = null;
         }
     }
 
-    getBasicAttackFrameIndex(holdTime) {
-        if (this.basicAttackFrames.length <= 1) return 0;
-
-        const progress = Math.min(1, holdTime / this.basicAttackChargeTime);
-        return Math.min(
-            this.basicAttackFrames.length - 1,
-            Math.floor(progress * (this.basicAttackFrames.length - 1))
-        );
-    }
-
-    getMouthPosition(offset = this.basicAttackHoldOffset) {
+    getMouthPosition(offset = this.projectileConfig.holdOffset) {
         if (!this.sprite) {
             return { x: 0, y: 0 };
         }
@@ -241,17 +225,6 @@ export class Player {
 
     getAttackParent() {
         return this.sceneContainer ?? this.app.stage;
-    }
-
-    isBasicAttackOutOfBounds(sprite) {
-        const padding = 64;
-
-        return (
-            sprite.x < -padding ||
-            sprite.x > this.app.screen.width + padding ||
-            sprite.y < -padding ||
-            sprite.y > this.app.screen.height + padding
-        );
     }
 
     createFrames(sheetTexture, frameCount) {

@@ -54,6 +54,14 @@ export default class Enemy {
         const distance = Math.sqrt(dx * dx + dy * dy);
 
         switch (this.state) {
+            case 'STAGGER':
+                this.timer -= deltaTime / 60;
+
+                if (this.timer <= 0) {
+                    this.state = 'CHASE';
+                }
+                break;
+
             case 'CHASE':
                 this.lookAt(playerX, playerY);
                 this.moveToward(dx, dy, distance, this.speed, deltaTime);
@@ -113,7 +121,7 @@ export default class Enemy {
     }
 
     lookAt(targetX, targetY) {
-        if (!this.active) return;
+        if (!this.active || this.state === 'STAGGER') return;
 
         const dx = targetX - this.x;
         const dy = targetY - this.y;
@@ -130,6 +138,13 @@ export default class Enemy {
         if (this.health <= 0) {
             this.die();
         }
+    }
+
+    stagger(duration = 0.33) {
+        if (!this.active) return;
+
+        this.state = 'STAGGER';
+        this.timer = duration;
     }
 
     doExplosionDamage() {

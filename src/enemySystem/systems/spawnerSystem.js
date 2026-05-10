@@ -38,12 +38,84 @@ export default class SpawnerSystem {
                 enemy.lookAt(playerX, playerY);
                 this.syncEnemyView(enemy);
             }
+
+            this.checkProjectileHits();
         };
     }
 
     async init() {
         await this.loadEnemyTextures();
         this.pool.preWarm(12);
+    }
+
+    checkProjectileHits() {
+        if (!this.player.projectiles.length) return;
+
+        for (const projectile of [...this.player.projectiles]) {
+            if (!projectile?.sprite) continue;
+
+            const projectileBox = projectile.getBounds();
+
+            for (const enemy of this.enemies) {
+                if (!enemy?.spriteView || !enemy.active) continue;
+
+                this.hitEntity(projectile, projectileBox, enemy, this.getSpriteBox(enemy.spriteView));
+
+                if (!projectile.sprite.parent) {
+                    break;
+                }
+            }
+        }
+    }
+
+    hitEntity(projectile, projectileBox, enemy, enemyBox) {
+        if (!projectile?.sprite || !enemy?.spriteView) return false;
+
+        if (!this.boxesOverlap(projectileBox, enemyBox)) {
+            return false;
+        }
+
+        const damage = projectile.damage ?? 1;
+
+        if (typeof enemy.takeDamage === 'function') {
+            enemy.takeDamage(damage);
+        } else {
+            enemy.health -= damage;
+
+            if (enemy.health <= 0 && typeof enemy.die === 'function') {
+                enemy.die();
+            }
+        }
+
+        if (typeof enemy.stagger === 'function') {
+            enemy.stagger(0.33);
+        }
+
+        projectile.destroy();
+        this.player.removeProjectile(projectile);
+
+        return true;
+    }
+
+    getSpriteBox(sprite) {
+        const width = sprite.width;
+        const height = sprite.height;
+
+        return {
+            left: sprite.x - width / 2,
+            right: sprite.x + width / 2,
+            top: sprite.y - height / 2,
+            bottom: sprite.y + height / 2
+        };
+    }
+
+    boxesOverlap(a, b) {
+        return (
+            a.left < b.right &&
+            a.right > b.left &&
+            a.top < b.bottom &&
+            a.bottom > b.top
+        );
     }
 
     async loadEnemyTextures() {
