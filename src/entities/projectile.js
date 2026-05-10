@@ -81,8 +81,8 @@ export default class Projectile {
     }
 
     getBounds() {
-        const width = this.sprite.width;
-        const height = this.sprite.height;
+        const width = this.sprite.width * (this.scale / 4);
+        const height = this.sprite.height * (this.scale / 4);
 
         return {
             left: this.sprite.x - width / 2,
