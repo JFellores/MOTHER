@@ -144,7 +144,7 @@ export default class Enemy {
         this.takeDamageTint(0.33);
 
         if (this.health <= 0) {
-         d   this.die();
+          this.die();
         }
     }
 
