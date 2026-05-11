@@ -18,6 +18,7 @@ export default class Enemy {
         this.sprite = null;
         this.spriteView = null;
         this.onExplosion = null;
+        this.scale = 1;
     }
 
     init(enemyTypeOrConfig, startX, startY) {

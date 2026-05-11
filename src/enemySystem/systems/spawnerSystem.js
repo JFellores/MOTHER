@@ -59,7 +59,7 @@ export default class SpawnerSystem {
             for (const enemy of this.enemies) {
                 if (!enemy?.spriteView || !enemy.active) continue;
 
-                this.hitEntity(projectile, projectileBox, enemy, this.getSpriteBox(enemy.spriteView));
+                this.hitEntity(projectile, projectileBox, enemy, this.getSpriteBox(enemy.spriteView, enemy.scale));
 
                 if (!projectile.sprite.parent) {
                     break;
@@ -97,9 +97,9 @@ export default class SpawnerSystem {
         return true;
     }
 
-    getSpriteBox(sprite) {
-        const width = sprite.width;
-        const height = sprite.height;
+    getSpriteBox(sprite, scale) {
+        const width = sprite.width * (scale / 4);
+        const height = sprite.height * (scale / 4);
 
         return {
             left: sprite.x - width / 2,
@@ -148,7 +148,7 @@ export default class SpawnerSystem {
         if (!enemy.spriteView) {
             enemy.spriteView = new Sprite(texture);
             enemy.spriteView.anchor.set(0.5);
-            enemy.spriteView.scale.set(1);
+            enemy.spriteView.scale.set(enemy.scale);
         } else {
             enemy.spriteView.texture = texture;
         }

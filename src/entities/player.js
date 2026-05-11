@@ -25,7 +25,7 @@ export class Player {
             launchSpeed: 350,
             spinSpeed: 10,
             holdOffset: 18,
-            scale: 2,
+            scale: 1,
             damage: 10
         };
 
