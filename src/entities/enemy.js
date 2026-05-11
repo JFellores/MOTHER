@@ -1,5 +1,4 @@
 import { ENEMY_DATA } from '../enemySystem/data/enemyData.js';
-import { Color } from 'pixi.js';
 
 export default class Enemy {
     constructor() {
@@ -19,6 +18,7 @@ export default class Enemy {
         this.spriteView = null;
         this.onExplosion = null;
         this.scale = 1;
+        this.tintResetTimer = null;
     }
 
     init(enemyTypeOrConfig, startX, startY) {
@@ -42,9 +42,11 @@ export default class Enemy {
         this.timer = 0;
         this.targetX = startX;
         this.targetY = startY;
+        this.tintResetTimer = null;
 
         if (this.spriteView) {
             this.spriteView.visible = true;
+            this.spriteView.tint = 0xFFFFFF;
         }
     }
 
@@ -136,25 +138,31 @@ export default class Enemy {
     }
 
     takeDamage(amount) {
-        
+        if (!this.active) return;
+
         this.health -= amount;
         this.takeDamageTint(0.33);
 
         if (this.health <= 0) {
-            this.die();
+         d   this.die();
         }
     }
 
     takeDamageTint(duration) {
-        const lightRed = new Color('rgba(255, 100, 100, 0.5)');
-        this.sprite.tint = lightRed;
+        if (!this.spriteView) return;
 
-        setTimeout(() => {
-            if (this.sprite) {
-                this.sprite.tint = 0xFFFFFF;
+        if (this.tintResetTimer) {
+            clearTimeout(this.tintResetTimer);
+        }
+
+        this.spriteView.tint = 0xFF6666;
+
+        this.tintResetTimer = setTimeout(() => {
+            if (this.spriteView) {
+                this.spriteView.tint = 0xFFFFFF;
             }
+            this.tintResetTimer = null;
         }, duration * 1000);
-
     }
 
     stagger(duration = 0.33) {
@@ -173,6 +181,11 @@ export default class Enemy {
     die() {
         this.active = false;
         this.state = 'IDLE';
+
+        if (this.tintResetTimer) {
+            clearTimeout(this.tintResetTimer);
+            this.tintResetTimer = null;
+        }
 
         if (this.spriteView) {
             this.spriteView.visible = false;
