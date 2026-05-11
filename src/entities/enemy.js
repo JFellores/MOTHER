@@ -1,4 +1,5 @@
 import { ENEMY_DATA } from '../enemySystem/data/enemyData.js';
+import { Color } from 'pixi.js';
 
 export default class Enemy {
     constructor() {
@@ -134,10 +135,25 @@ export default class Enemy {
     }
 
     takeDamage(amount) {
+        
         this.health -= amount;
+        this.takeDamageTint(0.33);
+
         if (this.health <= 0) {
             this.die();
         }
+    }
+
+    takeDamageTint(duration) {
+        const lightRed = new Color('rgba(255, 100, 100, 0.5)');
+        this.sprite.tint = lightRed;
+
+        setTimeout(() => {
+            if (this.sprite) {
+                this.sprite.tint = 0xFFFFFF;
+            }
+        }, duration * 1000);
+
     }
 
     stagger(duration = 0.33) {
