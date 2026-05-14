@@ -11,7 +11,16 @@ export const ENEMY_DATA = {
         speed: 100,
         sprite: '/enemySprites/enemy-1-idle-Sheet.png',
         frameCount: 5,
-        special: null,
+        special: {
+            type: 'DASH',
+            stopRange: 150,
+            windup: 0.35,
+            dashSpeed: 420,
+            dashDuration: 0.4,
+            recovery: 0.25,
+            cooldown: 5,
+            damage: 12
+        },
         //partsDrop: 10
         //specialMove = {}
         //add more properties as needed, like attack patterns, damage, etc.

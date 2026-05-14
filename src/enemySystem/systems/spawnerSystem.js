@@ -40,6 +40,7 @@ export default class SpawnerSystem {
             }
 
             this.checkProjectileHits();
+            this.checkEnemyPlayerHits();
         };
     }
 
@@ -65,6 +66,25 @@ export default class SpawnerSystem {
                     break;
                 }
             }
+        }
+    }
+
+    checkEnemyPlayerHits() {
+        if (!this.player.sprite || !this.player.hitbox) return;
+
+        const playerBox = this.player.hitbox;
+
+        for (const enemy of this.enemies) {
+            if (!enemy?.active || !enemy?.spriteView) continue;
+
+            if (enemy.special?.type !== 'DASH' || enemy.state !== 'DASHING') continue;
+
+            if (!this.boxesOverlap(playerBox, this.getSpriteBox(enemy.spriteView, enemy.scale))) {
+                continue;
+            }
+
+            this.player.takeDamage(enemy.special.damage ?? 10);
+            break;
         }
     }
 
