@@ -21,6 +21,8 @@ export default class Enemy {
         this.animationFrames = [];
         this.onExplosion = null;
         this.scale = 1;
+        this.tintResetTimer = null;
+        this.specialCooldownRemaining = 0;
     }
 
     init(enemyTypeOrConfig, startX, startY) {
@@ -45,9 +47,12 @@ export default class Enemy {
         this.timer = 0;
         this.targetX = startX;
         this.targetY = startY;
+        this.tintResetTimer = null;
+        this.specialCooldownRemaining = 0;
 
         if (this.spriteView) {
             this.spriteView.visible = true;
+            this.spriteView.tint = 0xFFFFFF;
         }
         /* this.sprite = new AnimatedSprite(this.idleFrames); */
     }
@@ -58,13 +63,27 @@ export default class Enemy {
         const dx = playerX - this.x;
         const dy = playerY - this.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
+        const deltaSeconds = deltaTime / 60;
+
+        if (this.specialCooldownRemaining > 0) {
+            this.specialCooldownRemaining = Math.max(0, this.specialCooldownRemaining - deltaSeconds);
+        }
 
         switch (this.state) {
             case 'STAGGER':
-                this.timer -= deltaTime / 60;
+                this.timer -= deltaSeconds;
 
                 if (this.timer <= 0) {
                     this.state = 'CHASE';
+                }
+                break;
+
+            case 'WINDUP':
+                this.timer -= deltaSeconds;
+                this.lookAt(playerX, playerY);
+
+                if (this.timer <= 0) {
+                    this.beginDash(playerX, playerY);
                 }
                 break;
 
@@ -81,13 +100,22 @@ export default class Enemy {
 
                 this.lookAt(this.targetX, this.targetY);
                 this.moveToward(dashDx, dashDy, dashDistance, this.special?.dashSpeed ?? this.speed, deltaTime);
-                this.timer -= deltaTime / 60;
+                this.timer -= deltaSeconds;
+
+                if (this.timer <= 0) {
+                    this.state = 'RECOVERY';
+                    this.timer = this.special?.recovery ?? 0.2;
+                }
+                break;
+            }
+
+            case 'RECOVERY':
+                this.timer -= deltaSeconds;
 
                 if (this.timer <= 0) {
                     this.state = 'CHASE';
                 }
                 break;
-            }
 
             case 'EXPLODING':
                 this.timer -= deltaTime / 60;
@@ -109,12 +137,29 @@ export default class Enemy {
             return;
         }
 
-        if (this.special.type === 'DASH' && dist < this.special.range) {
-            this.state = 'DASHING';
-            this.timer = this.special.duration ?? 0.5;
+        if (this.special.type === 'DASH' && this.specialCooldownRemaining > 0) {
+            return;
+        }
+
+        if (this.special.type === 'DASH' && dist <= (this.special.stopRange ?? this.special.range ?? 160)) {
+            this.state = 'WINDUP';
+            this.timer = this.special.windup ?? 0.3;
             this.targetX = playerX;
             this.targetY = playerY;
         }
+    }
+
+    beginDash(playerX, playerY) {
+        if (!this.special || this.special.type !== 'DASH') {
+            this.state = 'CHASE';
+            return;
+        }
+
+        this.state = 'DASHING';
+        this.timer = this.special.dashDuration ?? 0.25;
+        this.specialCooldownRemaining = this.special.cooldown ?? 5;
+        this.targetX = playerX;
+        this.targetY = playerY;
     }
 
     moveToward(dx, dy, dist, speed, deltaTime) {
@@ -140,10 +185,31 @@ export default class Enemy {
     }
 
     takeDamage(amount) {
+        if (!this.active) return;
+
         this.health -= amount;
+        this.takeDamageTint(0.33);
+
         if (this.health <= 0) {
-            this.die();
+          this.die();
         }
+    }
+
+    takeDamageTint(duration) {
+        if (!this.spriteView) return;
+
+        if (this.tintResetTimer) {
+            clearTimeout(this.tintResetTimer);
+        }
+
+        this.spriteView.tint = 0xFF6666;
+
+        this.tintResetTimer = setTimeout(() => {
+            if (this.spriteView) {
+                this.spriteView.tint = 0xFFFFFF;
+            }
+            this.tintResetTimer = null;
+        }, duration * 1000);
     }
 
     stagger(duration = 0.33) {
@@ -162,6 +228,11 @@ export default class Enemy {
     die() {
         this.active = false;
         this.state = 'IDLE';
+
+        if (this.tintResetTimer) {
+            clearTimeout(this.tintResetTimer);
+            this.tintResetTimer = null;
+        }
 
         if (this.spriteView) {
             this.spriteView.visible = false;

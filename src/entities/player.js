@@ -5,6 +5,9 @@ export class Player {
     constructor(app) {
         this.app = app;
         this.sprite = null;
+        this.maxHealth = 100;
+        this.health = this.maxHealth;
+        this.damageFlashTimer = null;
         this.idleFrames = [];
         this.attackFrames = [];
         this.isAttacking = false;
@@ -127,6 +130,26 @@ export class Player {
         this.sprite.loop = true;
         this.sprite.gotoAndPlay(0);
         this.hitbox = this.sprite.getBounds();
+    }
+
+    takeDamage(amount) {
+        this.health = Math.max(0, this.health - amount);
+
+        if (this.sprite) {
+            this.sprite.tint = 0xFF6666;
+
+            if (this.damageFlashTimer) {
+                clearTimeout(this.damageFlashTimer);
+            }
+
+            this.damageFlashTimer = setTimeout(() => {
+                if (this.sprite) {
+                    this.sprite.tint = 0xFFFFFF;
+                }
+
+                this.damageFlashTimer = null;
+            }, 120);
+        }
     }
 
     startProjectile() {
