@@ -18,11 +18,13 @@ export default class Enemy {
         this.spriteURL = null;
         this.spriteView = null;
         this.frameCount = 0;
-        this.animationFrames = [];
+        this.idleFrames = [];
+        this.attackFrames = [];
         this.onExplosion = null;
         this.scale = 1;
         this.tintResetTimer = null;
         this.specialCooldownRemaining = 0;
+        this.prevState = 'NONE';
     }
 
     init(enemyTypeOrConfig, startX, startY) {

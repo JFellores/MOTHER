@@ -12,6 +12,7 @@ export default class SpawnerSystem {
         this.player = player;
         this.enemies = [];
         this.enemyFrames = new Map();
+        this.enemyAttackFrames = new Map();
 
         this.pool = new ObjectPool();
         this.factory = new EnemyFactory(this.pool);
@@ -141,9 +142,17 @@ export default class SpawnerSystem {
     async loadEnemyTextures() {
         for (const config of Object.values(ENEMY_DATA)) {
             const sheetTexture = await Assets.load(config.spriteURL);
+            
+            const attackFrameCount = config.attackFrameCount ?? 1;
             const frameCount = config.frameCount ?? 1;
-            console.log(`Loaded texture for ${config.type} with ${frameCount} frames`);
+            console.log(config.attackURL);
+            // todo: add second map for attacking state
             this.enemyFrames.set(config.type, this.createFrames(sheetTexture, frameCount));
+            if (config.attackURL) {
+                const attackTexture = await Assets.load(config.attackURL);
+                const frameCount = config.frameCount ?? 1;
+                this.enemyAttackFrames.set(config.type, this.createFrames(attackTexture, config.attackFrameCount ?? 1));
+            } 
         }
     }
 
@@ -183,6 +192,25 @@ export default class SpawnerSystem {
             enemy.spriteView.loop = true;
         } else {
             /* enemy.spriteView.textures = animationFrames; */
+            
+        }
+
+        /*
+         * This is a bit hacky, better to hande this on the enemy with a proper way
+         */
+
+        if (enemy.state === 'WINDUP') {
+            enemy.spriteView.textures = this.enemyAttackFrames.get(enemy.type);
+            enemy.spriteView.gotoAndPlay(3);
+            enemy.prevState = 'DASHING';
+        } else if (enemy.state === 'DASHING') {
+            enemy.spriteView.textures = this.enemyAttackFrames.get(enemy.type);
+            enemy.spriteView.gotoAndPlay(4);
+            enemy.prevState = 'DASHING';
+        } else if (enemy.prevState === 'DASHING') {
+            enemy.spriteView.textures = animationFrames;
+            console.log('back to idle'); // Debug log
+            enemy.prevState = 'IDLE';
         }
 
         if (!enemy.spriteView.parent) {

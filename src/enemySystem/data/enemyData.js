@@ -10,7 +10,9 @@ export const ENEMY_DATA = {
         health: 20,
         speed: 100,
         spriteURL: '/enemySprites/enemy-1-idle-Sheet.png',
+        attackURL: '/enemySprites/enemy-1-attack-Sheet.png',
         frameCount: 5,
+        attackFrameCount: 7,
         special: {
             type: 'DASH',
             stopRange: 150,
