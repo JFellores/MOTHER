@@ -12,6 +12,10 @@ export class MainMenu {
         const backgroundTexture = await Assets.load('images/titleScreen.png');
         const background = new Sprite(backgroundTexture);
 
+        this.app.renderer.events.cursorStyles.default = 'url("/Cursors/baseCursor.png") 8 8, auto';
+        this.app.renderer.events.cursorStyles.hold = 'url("/Cursors/clickHoldCursor.png") 8 8, auto';
+        this.app.renderer.events.setCursor('default');
+
         await Assets.load({
             src: 'fonts/Lunar_Escape.otf',
             data: {

@@ -11,6 +11,7 @@ export class Player {
         this.idleFrames = [];
         this.attackFrames = [];
         this.isAttacking = false;
+        this.isPointerHolding = false;
         this.projectiles = [];
         this.activeProjectile = null;
         this.idleAnimationSpeed = 0.08;
@@ -64,10 +65,14 @@ export class Player {
         this.onPointerDown = () => {
             if (!this.sprite || this.isAttacking) return;
 
+            this.isPointerHolding = true;
+            this.app.renderer.events.setCursor('hold');
             this.startProjectile();
         };
 
         this.onPointerUp = () => {
+            this.isPointerHolding = false;
+            this.app.renderer.events.setCursor('default');
             this.releaseProjectile();
         };
 
@@ -95,6 +100,10 @@ export class Player {
                 const dx = this.mousePosition.x - this.sprite.x;
                 const dy = this.mousePosition.y - this.sprite.y;
                 this.sprite.rotation = Math.atan2(dy, dx) + Math.PI / 2;
+            }
+
+            if (this.isPointerHolding) {
+                this.app.renderer.events.setCursor('hold');
             }
 
             this.updateAttackAnimation(delta);

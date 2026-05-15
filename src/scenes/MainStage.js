@@ -31,6 +31,9 @@ export class MainStage {
 
     async init() {
         await this.tilemapManager.init(this.app.screen.width, this.app.screen.height);
+        this.app.renderer.events.cursorStyles.default = 'url("/Cursors/baseCursor.png") 8 8, auto';
+        this.app.renderer.events.cursorStyles.hold = 'url("/Cursors/clickHoldCursor.png") 8 8, auto';
+        this.app.renderer.events.setCursor('default');
         
         await this.player.init();
         this.container.addChild(this.player.sprite);
