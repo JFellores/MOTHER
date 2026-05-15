@@ -1,4 +1,4 @@
-import { Assets, Rectangle, Sprite, Texture } from 'pixi.js';
+import { AnimatedSprite, Assets, Rectangle, Texture } from 'pixi.js';
 import ObjectPool from '../factories/objectPool.js';
 import EnemyFactory from '../factories/enemyFactory.js';
 import HordeManager from '../managers/hordeManager.js';
@@ -11,7 +11,7 @@ export default class SpawnerSystem {
         this.container = container;
         this.player = player;
         this.enemies = [];
-        this.enemyTextures = new Map();
+        this.enemyFrames = new Map();
 
         this.pool = new ObjectPool();
         this.factory = new EnemyFactory(this.pool);
@@ -140,16 +140,26 @@ export default class SpawnerSystem {
 
     async loadEnemyTextures() {
         for (const config of Object.values(ENEMY_DATA)) {
-            const texture = await Assets.load(config.sprite);
+            const sheetTexture = await Assets.load(config.spriteURL);
             const frameCount = config.frameCount ?? 1;
-            const frameWidth = texture.width / frameCount;
-            const frameHeight = texture.height;
+            console.log(`Loaded texture for ${config.type} with ${frameCount} frames`);
+            this.enemyFrames.set(config.type, this.createFrames(sheetTexture, frameCount));
+        }
+    }
 
-            this.enemyTextures.set(config.type, new Texture({
-                source: texture.source,
-                frame: new Rectangle(0, 0, frameWidth, frameHeight)
+    createFrames(sheetTexture, frameCount) {
+        const frameWidth = sheetTexture.width / frameCount;
+        const frameHeight = sheetTexture.height;
+        const frames = [];
+
+        for (let index = 0; index < frameCount; index += 1) {
+            frames.push(new Texture({
+                source: sheetTexture.source,
+                frame: new Rectangle(index * frameWidth, 0, frameWidth, frameHeight)
             }));
         }
+
+        return frames;
     }
 
     registerEnemy(enemy) {
@@ -161,25 +171,30 @@ export default class SpawnerSystem {
     }
 
     syncEnemyView(enemy) {
-        const texture = this.enemyTextures.get(enemy.type);
+        const animationFrames = this.enemyFrames.get(enemy.type);
 
-        if (!texture) return;
+        if (!animationFrames) return;
 
         if (!enemy.spriteView) {
-            enemy.spriteView = new Sprite(texture);
+            enemy.spriteView = new AnimatedSprite(animationFrames);
             enemy.spriteView.anchor.set(0.5);
             enemy.spriteView.scale.set(enemy.scale);
+            enemy.spriteView.animationSpeed = 0.12;
+            enemy.spriteView.loop = true;
         } else {
-            enemy.spriteView.texture = texture;
+            /* enemy.spriteView.textures = animationFrames; */
         }
 
         if (!enemy.spriteView.parent) {
             this.container.addChild(enemy.spriteView);
         }
 
+        enemy.spriteView.play();
         enemy.spriteView.visible = true;
         enemy.spriteView.x = enemy.x;
         enemy.spriteView.y = enemy.y;
         enemy.spriteView.rotation = enemy.rotation;
     }
+
+    
 }

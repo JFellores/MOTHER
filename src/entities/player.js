@@ -112,6 +112,8 @@ export class Player {
 
             this.updateProjectiles(delta);
         };
+
+        /* this.attachPart("/enemySprites/enemy1-1-attac-Sheet.png", 2, 3); */
     }
 
     setSceneContainer(container) {
@@ -272,5 +274,13 @@ export class Player {
         }
 
         return frames;
+    }
+
+    attachPart(sheetTexture, xOffset, yOffset) {
+        const frameWidth = sheetTexture.width / 7;
+        const frameHeight = sheetTexture.height;
+        const frames = [];
+
+        this.sprite.textures
     }
 }

@@ -9,7 +9,7 @@ export const ENEMY_DATA = {
         type: ENEMY_TYPES.DRONE,
         health: 20,
         speed: 100,
-        sprite: '/enemySprites/enemy-1-idle-Sheet.png',
+        spriteURL: '/enemySprites/enemy-1-idle-Sheet.png',
         frameCount: 5,
         special: {
             type: 'DASH',
@@ -29,7 +29,7 @@ export const ENEMY_DATA = {
         type: ENEMY_TYPES.SPIKE,
         health: 50,
         speed: 60,
-        sprite: '/enemySprites/enemy-2-idle-Sheet.png',
+        spriteURL: '/enemySprites/enemy-2-idle-Sheet.png',
         frameCount: 7,
         special: null,
         //partsDrop: 25
@@ -41,7 +41,7 @@ export const ENEMY_DATA = {
         type: ENEMY_TYPES.ORB,
         health: 30,
         speed: 140,
-        sprite: '/enemySprites/enemy-3-idle-Sheet.png',
+        spriteURL: '/enemySprites/enemy-3-idle-Sheet.png',
         frameCount: 4,
         special: null,
         //partsDrop: 15
@@ -52,7 +52,7 @@ export const ENEMY_DATA = {
         type: ENEMY_TYPES.RHINO,
         health: 100,
         speed: 50,
-        sprite: '/enemySprites/enemy-4-idle-Sheet.png',
+        spriteURL: '/enemySprites/enemy-4-idle-Sheet.png',
         frameCount: 6,
         special: null,
         //partsDrop: 15

@@ -1,3 +1,4 @@
+import { Texture, Rectangle } from 'pixi.js';
 import { ENEMY_DATA } from '../enemySystem/data/enemyData.js';
 
 export default class Enemy {
@@ -14,8 +15,10 @@ export default class Enemy {
         this.type = null;
         this.health = 0;
         this.speed = 0;
-        this.sprite = null;
+        this.spriteURL = null;
         this.spriteView = null;
+        this.frameCount = 0;
+        this.animationFrames = [];
         this.onExplosion = null;
         this.scale = 1;
         this.tintResetTimer = null;
@@ -36,7 +39,8 @@ export default class Enemy {
         this.type = config.type;
         this.health = config.health;
         this.speed = config.speed;
-        this.sprite = config.sprite;
+        this.spriteURL = config.spriteURL; // sprite url
+        this.frameCount = config.frameCount ?? 1;
         this.special = config.special ?? null;
         this.active = true;
         this.state = 'CHASE';
@@ -50,6 +54,7 @@ export default class Enemy {
             this.spriteView.visible = true;
             this.spriteView.tint = 0xFFFFFF;
         }
+        /* this.sprite = new AnimatedSprite(this.idleFrames); */
     }
 
     update(playerX, playerY, deltaTime) {
