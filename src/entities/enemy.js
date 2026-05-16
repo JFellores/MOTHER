@@ -25,6 +25,8 @@ export default class Enemy {
         this.tintResetTimer = null;
         this.specialCooldownRemaining = 0;
         this.prevState = 'NONE';
+        this.flashAccumulator = 0;
+        this.flashOn = false;
     }
 
     init(enemyTypeOrConfig, startX, startY) {
@@ -51,10 +53,14 @@ export default class Enemy {
         this.targetY = startY;
         this.tintResetTimer = null;
         this.specialCooldownRemaining = 0;
+        this.prevState = 'NONE';
+        this.flashAccumulator = 0;
+        this.flashOn = false;
 
         if (this.spriteView) {
             this.spriteView.visible = true;
             this.spriteView.tint = 0xFFFFFF;
+            this.spriteView.loop = true;
         }
         /* this.sprite = new AnimatedSprite(this.idleFrames); */
     }
@@ -95,6 +101,52 @@ export default class Enemy {
                 this.checkSpecialTriggers(playerX, playerY, distance);
                 break;
 
+                case 'PREPARING':
+                    this.timer -= deltaSeconds;
+                    this.lookAt(playerX, playerY);
+
+                    this.flashAccumulator += deltaSeconds;
+
+                    if (this.flashAccumulator >= (this.special?.flashInterval ?? 0.15)) {
+                        this.flashAccumulator = 0;
+                        this.flashOn = !this.flashOn;
+
+                        if (this.spriteView) {
+                            this.spriteView.tint = this.flashOn ? 0xFF4A4A : 0xFFFFFF;
+                        }
+                    }
+
+                    if (this.timer <= 0) {
+                        if (this.spriteView) {
+                            this.spriteView.tint = 0xFFFFFF;
+                        }
+
+                        this.state = 'RUSH';
+                        this.timer = this.special?.rushDuration ?? 2.5;
+                    }
+                    break;
+
+                case 'RUSH':
+                    this.lookAt(playerX, playerY);
+                    this.moveToward(
+                        dx,
+                        dy,
+                        distance,
+                        this.speed * (this.special?.rushSpeedMultiplier ?? 2.4),
+                        deltaTime
+                    );
+                    this.timer -= deltaSeconds;
+
+                    if (distance <= (this.special?.contactRange ?? 32)) {
+                        this.beginExplosion();
+                        break;
+                    }
+
+                    if (this.timer <= 0) {
+                        this.beginExplosion();
+                    }
+                    break;
+
             case 'DASHING': {
                 const dashDx = this.targetX - this.x;
                 const dashDy = this.targetY - this.y;
@@ -120,7 +172,7 @@ export default class Enemy {
                 break;
 
             case 'EXPLODING':
-                this.timer -= deltaTime / 60;
+                this.timer -= deltaSeconds;
 
                 if (this.timer <= 0) {
                     this.doExplosionDamage();
@@ -133,9 +185,11 @@ export default class Enemy {
     checkSpecialTriggers(playerX, playerY, dist) {
         if (!this.special) return;
 
-        if (this.special.type === 'EXPLODE' && dist < this.special.range) {
-            this.state = 'EXPLODING';
-            this.timer = this.special.fuse ?? 1.0;
+        if (this.special.type === 'EXPLODE') {
+            if (this.state === 'CHASE' && dist <= (this.special.triggerRange ?? this.special.range ?? 160)) {
+                this.beginPreparation();
+            }
+
             return;
         }
 
@@ -148,6 +202,36 @@ export default class Enemy {
             this.timer = this.special.windup ?? 0.3;
             this.targetX = playerX;
             this.targetY = playerY;
+        }
+    }
+
+    beginPreparation() {
+        if (!this.special || this.special.type !== 'EXPLODE') {
+            return;
+        }
+
+        this.state = 'PREPARING';
+        this.timer = this.special.prepDuration ?? 1.5;
+        this.flashAccumulator = 0;
+        this.flashOn = false;
+
+        if (this.spriteView) {
+            this.spriteView.tint = 0xFFFFFF;
+        }
+    }
+
+    beginExplosion() {
+        if (!this.special || this.special.type !== 'EXPLODE' || this.state === 'EXPLODING') {
+            return;
+        }
+
+        this.state = 'EXPLODING';
+        this.timer = this.special.explosionDuration ?? 0.55;
+        this.flashAccumulator = 0;
+        this.flashOn = false;
+
+        if (this.spriteView) {
+            this.spriteView.tint = 0xFFFFFF;
         }
     }
 
@@ -190,7 +274,7 @@ export default class Enemy {
         if (!this.active) return;
 
         this.health -= amount;
-        this.takeDamageTint(0.33);
+                this.takeDamageTint(0.6);
 
         if (this.health <= 0) {
           this.die();
@@ -214,7 +298,7 @@ export default class Enemy {
         }, duration * 1000);
     }
 
-    stagger(duration = 0.33) {
+    stagger(duration = 0.6) {
         if (!this.active) return;
 
         this.state = 'STAGGER';
@@ -230,6 +314,9 @@ export default class Enemy {
     die() {
         this.active = false;
         this.state = 'IDLE';
+        this.prevState = 'NONE';
+        this.flashAccumulator = 0;
+        this.flashOn = false;
 
         if (this.tintResetTimer) {
             clearTimeout(this.tintResetTimer);
@@ -237,7 +324,9 @@ export default class Enemy {
         }
 
         if (this.spriteView) {
+            this.spriteView.tint = 0xFFFFFF;
             this.spriteView.visible = false;
+            this.spriteView.loop = true;
         }
     }
 }
