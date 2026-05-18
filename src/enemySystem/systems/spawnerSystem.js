@@ -124,7 +124,7 @@ export default class SpawnerSystem {
                 continue;
             }
 
-            enemy.beginExplosion?.();
+            enemy.behavior?.beginExplosion?.(enemy);
             break;
         }
     }
@@ -148,9 +148,11 @@ export default class SpawnerSystem {
             }
         }
 
-        if (enemy.special?.type !== 'RHINO_LASER' && typeof enemy.stagger === 'function') {
-            enemy.stagger(0.6);
-        }
+            if (typeof enemy.canBeStaggered === 'function' ? enemy.canBeStaggered() : true) {
+                if (typeof enemy.stagger === 'function') {
+                    enemy.stagger(0.6);
+                }
+            }
 
         projectile.destroy();
         this.player.removeProjectile(projectile);
@@ -336,107 +338,109 @@ export default class SpawnerSystem {
             enemy.spriteView.addChild(enemy.specialView);
         }
 
+        const extraViews = enemy.extraViews ?? (enemy.extraViews = {});
+
         const specialAnimation = specialFrames?.[enemy.state];
 
         if (specialAnimation?.segmented) {
             const { head, body, tail } = specialAnimation.parts;
 
-            if (!enemy.specialHeadView) {
-                enemy.specialHeadView = new AnimatedSprite(head.frames);
-                enemy.specialView.addChild(enemy.specialHeadView);
+            if (!extraViews.head) {
+                extraViews.head = new AnimatedSprite(head.frames);
+                enemy.specialView.addChild(extraViews.head);
             }
 
-            if (!enemy.specialBodyView) {
-                enemy.specialBodyView = new AnimatedSprite(body.frames);
-                enemy.specialView.addChild(enemy.specialBodyView);
+            if (!extraViews.body) {
+                extraViews.body = new AnimatedSprite(body.frames);
+                enemy.specialView.addChild(extraViews.body);
             }
 
-            if (!enemy.specialTailView) {
-                enemy.specialTailView = new AnimatedSprite(tail.frames);
-                enemy.specialView.addChild(enemy.specialTailView);
+            if (!extraViews.tail) {
+                extraViews.tail = new AnimatedSprite(tail.frames);
+                enemy.specialView.addChild(extraViews.tail);
             }
 
-            enemy.specialHeadView.visible = true;
-            enemy.specialBodyView.visible = true;
-            enemy.specialTailView.visible = true;
+            extraViews.head.visible = true;
+            extraViews.body.visible = true;
+            extraViews.tail.visible = true;
 
-            enemy.specialHeadView.anchor.set(head.anchorX ?? 0, head.anchorY ?? 0.5);
-            enemy.specialBodyView.anchor.set(body.anchorX ?? 0, body.anchorY ?? 0.5);
-            enemy.specialTailView.anchor.set(tail.anchorX ?? 0, tail.anchorY ?? 0.5);
+            extraViews.head.anchor.set(head.anchorX ?? 0, head.anchorY ?? 0.5);
+            extraViews.body.anchor.set(body.anchorX ?? 0, body.anchorY ?? 0.5);
+            extraViews.tail.anchor.set(tail.anchorX ?? 0, tail.anchorY ?? 0.5);
 
-            enemy.specialHeadView.scale.set(head.scaleX ?? 1, head.scaleY ?? 1);
-            enemy.specialBodyView.scale.set(body.scaleX ?? 1, body.scaleY ?? 1);
-            enemy.specialTailView.scale.set(tail.scaleX ?? 1, tail.scaleY ?? 1);
+            extraViews.head.scale.set(head.scaleX ?? 1, head.scaleY ?? 1);
+            extraViews.body.scale.set(body.scaleX ?? 1, body.scaleY ?? 1);
+            extraViews.tail.scale.set(tail.scaleX ?? 1, tail.scaleY ?? 1);
 
-            if (enemy.prevState !== enemy.state || enemy.specialHeadView.textures !== head.frames) {
-                enemy.specialHeadView.textures = head.frames;
-                enemy.specialHeadView.animationSpeed = head.animationSpeed ?? specialAnimation.animationSpeed;
-                enemy.specialHeadView.loop = head.loop ?? specialAnimation.loop;
-                enemy.specialHeadView.gotoAndPlay(0);
+            if (enemy.prevState !== enemy.state || extraViews.head.textures !== head.frames) {
+                extraViews.head.textures = head.frames;
+                extraViews.head.animationSpeed = head.animationSpeed ?? specialAnimation.animationSpeed;
+                extraViews.head.loop = head.loop ?? specialAnimation.loop;
+                extraViews.head.gotoAndPlay(0);
             }
 
-            if (enemy.prevState !== enemy.state || enemy.specialBodyView.textures !== body.frames) {
-                enemy.specialBodyView.textures = body.frames;
-                enemy.specialBodyView.animationSpeed = body.animationSpeed ?? specialAnimation.animationSpeed;
-                enemy.specialBodyView.loop = body.loop ?? specialAnimation.loop;
-                enemy.specialBodyView.gotoAndPlay(0);
+            if (enemy.prevState !== enemy.state || extraViews.body.textures !== body.frames) {
+                extraViews.body.textures = body.frames;
+                extraViews.body.animationSpeed = body.animationSpeed ?? specialAnimation.animationSpeed;
+                extraViews.body.loop = body.loop ?? specialAnimation.loop;
+                extraViews.body.gotoAndPlay(0);
             }
 
-            if (enemy.prevState !== enemy.state || enemy.specialTailView.textures !== tail.frames) {
-                enemy.specialTailView.textures = tail.frames;
-                enemy.specialTailView.animationSpeed = tail.animationSpeed ?? specialAnimation.animationSpeed;
-                enemy.specialTailView.loop = tail.loop ?? specialAnimation.loop;
-                enemy.specialTailView.gotoAndPlay(0);
+            if (enemy.prevState !== enemy.state || extraViews.tail.textures !== tail.frames) {
+                extraViews.tail.textures = tail.frames;
+                extraViews.tail.animationSpeed = tail.animationSpeed ?? specialAnimation.animationSpeed;
+                extraViews.tail.loop = tail.loop ?? specialAnimation.loop;
+                extraViews.tail.gotoAndPlay(0);
             }
 
-            const headWidth = enemy.specialHeadView.width;
-            const bodyWidth = enemy.specialBodyView.width;
+            const headWidth = extraViews.head.width;
+            const bodyWidth = extraViews.body.width;
 
-            enemy.specialHeadView.x = 0;
-            enemy.specialBodyView.x = headWidth;
-            enemy.specialTailView.x = headWidth + bodyWidth;
+            extraViews.head.x = 0;
+            extraViews.body.x = headWidth;
+            extraViews.tail.x = headWidth + bodyWidth;
 
             enemy.specialView.visible = true;
             enemy.specialView.x = 0;
             enemy.specialView.y = this.getSpecialFxYOffset(enemy);
             enemy.specialView.rotation = enemy.specialRotation ?? 0;
 
-            enemy.specialMainView?.visible && (enemy.specialMainView.visible = false);
+            extraViews.main && (extraViews.main.visible = false);
             enemy.prevState = enemy.state;
         } else if (specialAnimation) {
-            if (!enemy.specialMainView) {
-                enemy.specialMainView = new AnimatedSprite(specialAnimation.frames);
-                enemy.specialView.addChild(enemy.specialMainView);
+            if (!extraViews.main) {
+                extraViews.main = new AnimatedSprite(specialAnimation.frames);
+                enemy.specialView.addChild(extraViews.main);
             }
 
-            enemy.specialMainView.visible = true;
-            enemy.specialMainView.anchor.set(specialAnimation.anchorX ?? 0.5, specialAnimation.anchorY ?? 0.5);
-            enemy.specialMainView.scale.set(specialAnimation.scaleX ?? 1, specialAnimation.scaleY ?? 1);
+            extraViews.main.visible = true;
+            extraViews.main.anchor.set(specialAnimation.anchorX ?? 0.5, specialAnimation.anchorY ?? 0.5);
+            extraViews.main.scale.set(specialAnimation.scaleX ?? 1, specialAnimation.scaleY ?? 1);
 
-            if (enemy.prevState !== enemy.state || enemy.specialMainView.textures !== specialAnimation.frames) {
-                enemy.specialMainView.textures = specialAnimation.frames;
-                enemy.specialMainView.animationSpeed = specialAnimation.animationSpeed;
-                enemy.specialMainView.loop = specialAnimation.loop;
-                enemy.specialMainView.gotoAndPlay(0);
+            if (enemy.prevState !== enemy.state || extraViews.main.textures !== specialAnimation.frames) {
+                extraViews.main.textures = specialAnimation.frames;
+                extraViews.main.animationSpeed = specialAnimation.animationSpeed;
+                extraViews.main.loop = specialAnimation.loop;
+                extraViews.main.gotoAndPlay(0);
             }
 
-            enemy.specialHeadView && (enemy.specialHeadView.visible = false);
-            enemy.specialBodyView && (enemy.specialBodyView.visible = false);
-            enemy.specialTailView && (enemy.specialTailView.visible = false);
+            extraViews.head && (extraViews.head.visible = false);
+            extraViews.body && (extraViews.body.visible = false);
+            extraViews.tail && (extraViews.tail.visible = false);
 
             enemy.specialView.visible = true;
             enemy.specialView.x = 0;
             enemy.specialView.y = this.getSpecialFxYOffset(enemy);
             enemy.specialView.rotation = enemy.specialRotation ?? 0;
 
-            enemy.specialMainView.play();
+            extraViews.main.play();
             enemy.prevState = enemy.state;
         } else if (enemy.specialView) {
             enemy.specialView.visible = false;
-            enemy.specialMainView && (enemy.specialMainView.visible = false);
-            enemy.specialHeadView && (enemy.specialHeadView.visible = false);
-            enemy.specialBodyView && (enemy.specialBodyView.visible = false);
-            enemy.specialTailView && (enemy.specialTailView.visible = false);
+            extraViews.main && (extraViews.main.visible = false);
+            extraViews.head && (extraViews.head.visible = false);
+            extraViews.body && (extraViews.body.visible = false);
+            extraViews.tail && (extraViews.tail.visible = false);
         }
 
         if (enemy.state === 'WINDUP') {

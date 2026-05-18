@@ -138,7 +138,7 @@ export const ENEMY_DATA = {
                             frameCount: 18,
                             anchorX: 0,
                             anchorY: 0.5,
-                            scaleX: 10,
+                            scaleX: 12,
                             scaleY: 1
                         },
                         tail: {
