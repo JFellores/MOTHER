@@ -1,4 +1,4 @@
-import { AnimatedSprite, Assets, Rectangle, Texture } from 'pixi.js';
+import { AnimatedSprite, Assets, Container, Rectangle, Texture } from 'pixi.js';
 import ObjectPool from '../factories/objectPool.js';
 import EnemyFactory from '../factories/enemyFactory.js';
 import HordeManager from '../managers/hordeManager.js';
@@ -14,6 +14,7 @@ export default class SpawnerSystem {
         this.enemyFrames = new Map();
         this.enemyAttackFrames = new Map();
         this.enemyExplosionFrames = new Map();
+        this.enemySpecialFrames = new Map();
 
         this.pool = new ObjectPool();
         this.factory = new EnemyFactory(this.pool);
@@ -44,7 +45,6 @@ export default class SpawnerSystem {
 
                     continue;
                 }
-                enemy.lookAt(playerX, playerY);
                 this.syncEnemyView(enemy);
             }
 
@@ -99,6 +99,25 @@ export default class SpawnerSystem {
         for (const enemy of this.enemies) {
             if (!enemy?.active || !enemy?.spriteView) continue;
 
+            if (enemy.special?.type !== 'RHINO_LASER' || enemy.state !== 'LASER_ATTACK') continue;
+
+            const laserBox = this.getAttackBox(enemy);
+
+            if (!laserBox || !this.boxesOverlap(playerBox, laserBox)) {
+                continue;
+            }
+
+            if (enemy.laserDamageTickRemaining <= 0) {
+                this.player.takeDamage(enemy.special.damage ?? 24);
+                enemy.laserDamageTickRemaining = enemy.special.damageTickInterval ?? 0.15;
+            }
+
+            break;
+        }
+
+        for (const enemy of this.enemies) {
+            if (!enemy?.active || !enemy?.spriteView) continue;
+
             if (enemy.special?.type !== 'EXPLODE' || enemy.state !== 'RUSH') continue;
 
             if (!this.boxesOverlap(playerBox, this.getSpriteBox(enemy.spriteView, enemy.scale))) {
@@ -129,7 +148,7 @@ export default class SpawnerSystem {
             }
         }
 
-        if (typeof enemy.stagger === 'function') {
+        if (enemy.special?.type !== 'RHINO_LASER' && typeof enemy.stagger === 'function') {
             enemy.stagger(0.6);
         }
 
@@ -178,6 +197,23 @@ export default class SpawnerSystem {
         };
     }
 
+    getAttackBox(enemy) {
+        const attackSprite = enemy.specialView ?? enemy.spriteView;
+
+        if (!attackSprite || typeof attackSprite.getBounds !== 'function') {
+            return null;
+        }
+
+        const bounds = attackSprite.getBounds();
+
+        return {
+            left: bounds.x,
+            right: bounds.x + bounds.width,
+            top: bounds.y,
+            bottom: bounds.y + bounds.height
+        };
+    }
+
     boxesOverlap(a, b) {
         return (
             a.left < b.right &&
@@ -190,17 +226,56 @@ export default class SpawnerSystem {
     async loadEnemyTextures() {
         for (const config of Object.values(ENEMY_DATA)) {
             const sheetTexture = await Assets.load(config.spriteURL);
-            
-            const attackFrameCount = config.attackFrameCount ?? 1;
             const frameCount = config.frameCount ?? 1;
-            console.log(config.attackURL);
-            // todo: add second map for attacking state
+
             this.enemyFrames.set(config.type, this.createFrames(sheetTexture, frameCount));
             if (config.attackURL) {
                 const attackTexture = await Assets.load(config.attackURL);
-                const frameCount = config.frameCount ?? 1;
                 this.enemyAttackFrames.set(config.type, this.createFrames(attackTexture, config.attackFrameCount ?? 1));
-            } 
+            }
+
+            if (config.special?.animations) {
+                const specialFrames = {};
+
+                for (const [stateName, animationConfig] of Object.entries(config.special.animations)) {
+                    if (animationConfig.parts) {
+                        const parts = {};
+
+                        for (const [partName, partConfig] of Object.entries(animationConfig.parts)) {
+                            const partTexture = await Assets.load(partConfig.url);
+                            parts[partName] = {
+                                frames: this.createFrames(partTexture, partConfig.frameCount ?? 1),
+                                animationSpeed: partConfig.animationSpeed ?? animationConfig.animationSpeed ?? 0.12,
+                                loop: partConfig.loop ?? animationConfig.loop ?? true,
+                                anchorX: partConfig.anchorX ?? 0,
+                                anchorY: partConfig.anchorY ?? 0.5,
+                                scaleX: partConfig.scaleX ?? 1,
+                                scaleY: partConfig.scaleY ?? 1
+                            };
+                        }
+
+                        specialFrames[stateName] = {
+                            segmented: true,
+                            animationSpeed: animationConfig.animationSpeed ?? 0.12,
+                            loop: animationConfig.loop ?? true,
+                            parts
+                        };
+                    } else {
+                        const specialTexture = await Assets.load(animationConfig.url);
+                        specialFrames[stateName] = {
+                            frames: this.createFrames(specialTexture, animationConfig.frameCount ?? 1),
+                            animationSpeed: animationConfig.animationSpeed ?? 0.12,
+                            loop: animationConfig.loop ?? true,
+                            anchorX: animationConfig.anchorX ?? 0.5,
+                            anchorY: animationConfig.anchorY ?? 0.5,
+                            scaleX: animationConfig.scaleX ?? 1,
+                            scaleY: animationConfig.scaleY ?? 1
+                        };
+                    }
+                }
+
+                this.enemySpecialFrames.set(config.type, specialFrames);
+            }
 
             if (config.special?.explosionURL) {
                 const explosionTexture = await Assets.load(config.special.explosionURL);
@@ -241,6 +316,7 @@ export default class SpawnerSystem {
         const animationFrames = this.enemyFrames.get(enemy.type);
         const attackFrames = this.enemyAttackFrames.get(enemy.type);
         const explosionFrames = this.enemyExplosionFrames.get(enemy.type);
+        const specialFrames = this.enemySpecialFrames.get(enemy.type);
 
         if (!animationFrames) return;
 
@@ -255,8 +331,116 @@ export default class SpawnerSystem {
             
         }
 
+        if (!enemy.specialView) {
+            enemy.specialView = new Container();
+            enemy.spriteView.addChild(enemy.specialView);
+        }
+
+        const specialAnimation = specialFrames?.[enemy.state];
+
+        if (specialAnimation?.segmented) {
+            const { head, body, tail } = specialAnimation.parts;
+
+            if (!enemy.specialHeadView) {
+                enemy.specialHeadView = new AnimatedSprite(head.frames);
+                enemy.specialView.addChild(enemy.specialHeadView);
+            }
+
+            if (!enemy.specialBodyView) {
+                enemy.specialBodyView = new AnimatedSprite(body.frames);
+                enemy.specialView.addChild(enemy.specialBodyView);
+            }
+
+            if (!enemy.specialTailView) {
+                enemy.specialTailView = new AnimatedSprite(tail.frames);
+                enemy.specialView.addChild(enemy.specialTailView);
+            }
+
+            enemy.specialHeadView.visible = true;
+            enemy.specialBodyView.visible = true;
+            enemy.specialTailView.visible = true;
+
+            enemy.specialHeadView.anchor.set(head.anchorX ?? 0, head.anchorY ?? 0.5);
+            enemy.specialBodyView.anchor.set(body.anchorX ?? 0, body.anchorY ?? 0.5);
+            enemy.specialTailView.anchor.set(tail.anchorX ?? 0, tail.anchorY ?? 0.5);
+
+            enemy.specialHeadView.scale.set(head.scaleX ?? 1, head.scaleY ?? 1);
+            enemy.specialBodyView.scale.set(body.scaleX ?? 1, body.scaleY ?? 1);
+            enemy.specialTailView.scale.set(tail.scaleX ?? 1, tail.scaleY ?? 1);
+
+            if (enemy.prevState !== enemy.state || enemy.specialHeadView.textures !== head.frames) {
+                enemy.specialHeadView.textures = head.frames;
+                enemy.specialHeadView.animationSpeed = head.animationSpeed ?? specialAnimation.animationSpeed;
+                enemy.specialHeadView.loop = head.loop ?? specialAnimation.loop;
+                enemy.specialHeadView.gotoAndPlay(0);
+            }
+
+            if (enemy.prevState !== enemy.state || enemy.specialBodyView.textures !== body.frames) {
+                enemy.specialBodyView.textures = body.frames;
+                enemy.specialBodyView.animationSpeed = body.animationSpeed ?? specialAnimation.animationSpeed;
+                enemy.specialBodyView.loop = body.loop ?? specialAnimation.loop;
+                enemy.specialBodyView.gotoAndPlay(0);
+            }
+
+            if (enemy.prevState !== enemy.state || enemy.specialTailView.textures !== tail.frames) {
+                enemy.specialTailView.textures = tail.frames;
+                enemy.specialTailView.animationSpeed = tail.animationSpeed ?? specialAnimation.animationSpeed;
+                enemy.specialTailView.loop = tail.loop ?? specialAnimation.loop;
+                enemy.specialTailView.gotoAndPlay(0);
+            }
+
+            const headWidth = enemy.specialHeadView.width;
+            const bodyWidth = enemy.specialBodyView.width;
+
+            enemy.specialHeadView.x = 0;
+            enemy.specialBodyView.x = headWidth;
+            enemy.specialTailView.x = headWidth + bodyWidth;
+
+            enemy.specialView.visible = true;
+            enemy.specialView.x = 0;
+            enemy.specialView.y = this.getSpecialFxYOffset(enemy);
+            enemy.specialView.rotation = enemy.specialRotation ?? 0;
+
+            enemy.specialMainView?.visible && (enemy.specialMainView.visible = false);
+            enemy.prevState = enemy.state;
+        } else if (specialAnimation) {
+            if (!enemy.specialMainView) {
+                enemy.specialMainView = new AnimatedSprite(specialAnimation.frames);
+                enemy.specialView.addChild(enemy.specialMainView);
+            }
+
+            enemy.specialMainView.visible = true;
+            enemy.specialMainView.anchor.set(specialAnimation.anchorX ?? 0.5, specialAnimation.anchorY ?? 0.5);
+            enemy.specialMainView.scale.set(specialAnimation.scaleX ?? 1, specialAnimation.scaleY ?? 1);
+
+            if (enemy.prevState !== enemy.state || enemy.specialMainView.textures !== specialAnimation.frames) {
+                enemy.specialMainView.textures = specialAnimation.frames;
+                enemy.specialMainView.animationSpeed = specialAnimation.animationSpeed;
+                enemy.specialMainView.loop = specialAnimation.loop;
+                enemy.specialMainView.gotoAndPlay(0);
+            }
+
+            enemy.specialHeadView && (enemy.specialHeadView.visible = false);
+            enemy.specialBodyView && (enemy.specialBodyView.visible = false);
+            enemy.specialTailView && (enemy.specialTailView.visible = false);
+
+            enemy.specialView.visible = true;
+            enemy.specialView.x = 0;
+            enemy.specialView.y = this.getSpecialFxYOffset(enemy);
+            enemy.specialView.rotation = enemy.specialRotation ?? 0;
+
+            enemy.specialMainView.play();
+            enemy.prevState = enemy.state;
+        } else if (enemy.specialView) {
+            enemy.specialView.visible = false;
+            enemy.specialMainView && (enemy.specialMainView.visible = false);
+            enemy.specialHeadView && (enemy.specialHeadView.visible = false);
+            enemy.specialBodyView && (enemy.specialBodyView.visible = false);
+            enemy.specialTailView && (enemy.specialTailView.visible = false);
+        }
+
         if (enemy.state === 'WINDUP') {
-            if (enemy.prevState !== 'WINDUP' || enemy.spriteView.textures !== attackFrames) {
+            if (enemy.prevState !== 'WINDUP' || enemy.spriteView.textures !== (attackFrames ?? animationFrames)) {
                 enemy.spriteView.textures = attackFrames ?? animationFrames;
                 enemy.spriteView.animationSpeed = 0.16;
                 enemy.spriteView.loop = true;
@@ -265,7 +449,7 @@ export default class SpawnerSystem {
 
             enemy.prevState = 'WINDUP';
         } else if (enemy.state === 'DASHING') {
-            if (enemy.prevState !== 'DASHING' || enemy.spriteView.textures !== attackFrames) {
+            if (enemy.prevState !== 'DASHING' || enemy.spriteView.textures !== (attackFrames ?? animationFrames)) {
                 enemy.spriteView.textures = attackFrames ?? animationFrames;
                 enemy.spriteView.animationSpeed = 0.16;
                 enemy.spriteView.loop = true;
@@ -293,7 +477,7 @@ export default class SpawnerSystem {
             enemy.spriteView.tint = 0xFFFFFF;
             enemy.prevState = 'EXPLODING';
         } else {
-            if (enemy.prevState === 'DASHING' || enemy.prevState === 'EXPLODING' || enemy.spriteView.textures !== animationFrames) {
+            if (enemy.spriteView.textures !== animationFrames) {
                 enemy.spriteView.textures = animationFrames;
                 enemy.spriteView.animationSpeed = 0.12;
                 enemy.spriteView.loop = true;
@@ -316,6 +500,22 @@ export default class SpawnerSystem {
         enemy.spriteView.x = enemy.x;
         enemy.spriteView.y = enemy.y;
         enemy.spriteView.rotation = enemy.rotation;
+    }
+
+    getSpecialFxYOffset(enemy) {
+        if (enemy.state === 'CHARGE_SPIN') {
+            return -26 / (enemy.scale || 1);
+        }
+
+        if (enemy.state === 'LASER_ATTACK') {
+            return -30 / (enemy.scale || 1);
+        }
+
+        if (enemy.state === 'LASER_STOP') {
+            return -30 / (enemy.scale || 1);
+        }
+
+        return 0;
     }
 
     

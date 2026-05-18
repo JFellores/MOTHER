@@ -67,10 +67,92 @@ export const ENEMY_DATA = {
     [ENEMY_TYPES.RHINO]: {
         type: ENEMY_TYPES.RHINO,
         health: 100,
-        speed: 50,
+        speed: 35,
         spriteURL: '/enemySprites/enemy-4-idle-Sheet.png',
         frameCount: 6,
-        special: null,
+        special: {
+            type: 'RHINO_LASER',
+            triggerRange: 220,
+            chargeDuration: 8,
+            chargeSpinSpeed: 10,
+            attackDuration: 1.2,
+            stopDuration: 0.75,
+            cooldown: 8,
+            damage: 24,
+            damageTickInterval: 0.15,
+            animations: {
+                CHARGE_SPIN: {
+                    url: '/enemySprites/enemyFX/rhinoChargeSpin-Sheet.png',
+                    frameCount: 14,
+                    animationSpeed: 0.3,
+                    loop: true,
+                    anchorX: 0.5,
+                    anchorY: 0.5,
+                    scaleX: 1,
+                    scaleY: 1
+                },
+                LASER_ATTACK: {
+                    animationSpeed: 0.55,
+                    loop: false,
+                    parts: {
+                        head: {
+                            url: '/enemySprites/enemyFX/rhinoLaserAttackHead-Sheet.png',
+                            frameCount: 48,
+                            anchorX: 0,
+                            anchorY: 0.5,
+                            scaleX: 1,
+                            scaleY: 1
+                        },
+                        body: {
+                            url: '/enemySprites/enemyFX/rhinoLaserAttackBody-Sheet.png',
+                            frameCount: 48,
+                            anchorX: 0,
+                            anchorY: 0.5,
+                            scaleX: 12,
+                            scaleY: 1
+                        },
+                        tail: {
+                            url: '/enemySprites/enemyFX/rhinoLaserAttackTail-Sheet.png',
+                            frameCount: 48,
+                            anchorX: 0,
+                            anchorY: 0.5,
+                            scaleX: 1,
+                            scaleY: 1
+                        }
+                    }
+                },
+                LASER_STOP: {
+                    animationSpeed: 0.42,
+                    loop: false,
+                    parts: {
+                        head: {
+                            url: '/enemySprites/enemyFX/rhinoLaserAttackStopHead-Sheet.png',
+                            frameCount: 18,
+                            anchorX: 0,
+                            anchorY: 0.5,
+                            scaleX: 1,
+                            scaleY: 1
+                        },
+                        body: {
+                            url: '/enemySprites/enemyFX/rhinoLaserAttackStopBody-Sheet.png',
+                            frameCount: 18,
+                            anchorX: 0,
+                            anchorY: 0.5,
+                            scaleX: 10,
+                            scaleY: 1
+                        },
+                        tail: {
+                            url: '/enemySprites/enemyFX/rhinoLaserAttackStopTail-Sheet.png',
+                            frameCount: 18,
+                            anchorX: 0,
+                            anchorY: 0.5,
+                            scaleX: 1,
+                            scaleY: 1
+                        }
+                    }
+                }
+            }
+        },
         //partsDrop: 15
         //specialMove = {}
         //add more properties as needed, like attack patterns, damage, etc.

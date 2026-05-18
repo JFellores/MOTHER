@@ -4,20 +4,20 @@ export const WAVE_TIMELINE = [
     {
         time: 0,
         type: ENEMY_TYPES.DRONE,
-        interval: 3
+        interval: 2
     },
     {
-        time: 15,
+        time: 0,
         type: ENEMY_TYPES.SPIKE,
         interval: 5
     },
     {
-        time: 30,
+        time: 0,
         type: ENEMY_TYPES.ORB,
         interval: 7
     },
     {
-        time: 30,
+        time: 0,
         type: ENEMY_TYPES.RHINO,
         interval: 10
     }
