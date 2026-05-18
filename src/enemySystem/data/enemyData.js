@@ -45,7 +45,21 @@ export const ENEMY_DATA = {
         speed: 140,
         spriteURL: '/enemySprites/enemy-3-idle-Sheet.png',
         frameCount: 4,
-        special: null,
+        special: {
+            type: 'EXPLODE',
+            range: 180,
+            triggerRange: 180,
+            prepDuration: 1.5,
+            flashInterval: 0.15,
+            rushDuration: 2.5,
+            rushSpeedMultiplier: 2.4,
+            contactRange: 32,
+            explosionRange: 120,
+            explosionDuration: 0.55,
+            explosionURL: '/enemySprites/enemyFX/orbExplosion.png',
+            explosionFrameCount: 8,
+            damage: 18
+        },
         //partsDrop: 15
         //specialMove = {}
         //add more properties as needed, like attack patterns, damage, etc.

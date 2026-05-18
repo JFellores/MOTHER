@@ -14,8 +14,8 @@ export class MainStage {
         this.tilemapManager = new TilemapManager(this.container, {
             mapWidth: app.screen.width,
             mapHeight: app.screen.height,
-            tilesetPath: '/tileMaps/tilemap-2.png',
-            tilesetAtlasPath: '/tileMaps/tilemap.json',
+            tilesetPath: '/tilemaps/tilemap-2.png',
+            tilesetAtlasPath: '/tilemaps/tilemap.json',
             tileSize: 16,
             tileMapping: {
                 'top-left': { x: 0, y: 0 },      

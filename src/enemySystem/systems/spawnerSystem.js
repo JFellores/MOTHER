@@ -13,6 +13,7 @@ export default class SpawnerSystem {
         this.enemies = [];
         this.enemyFrames = new Map();
         this.enemyAttackFrames = new Map();
+        this.enemyExplosionFrames = new Map();
 
         this.pool = new ObjectPool();
         this.factory = new EnemyFactory(this.pool);
@@ -36,6 +37,13 @@ export default class SpawnerSystem {
 
             for (const enemy of this.enemies) {
                 enemy.update(playerX, playerY, deltaTime);
+                if (!enemy.active) {
+                    if (enemy.spriteView) {
+                        enemy.spriteView.visible = false;
+                    }
+
+                    continue;
+                }
                 enemy.lookAt(playerX, playerY);
                 this.syncEnemyView(enemy);
             }
@@ -87,6 +95,19 @@ export default class SpawnerSystem {
             this.player.takeDamage(enemy.special.damage ?? 10);
             break;
         }
+
+        for (const enemy of this.enemies) {
+            if (!enemy?.active || !enemy?.spriteView) continue;
+
+            if (enemy.special?.type !== 'EXPLODE' || enemy.state !== 'RUSH') continue;
+
+            if (!this.boxesOverlap(playerBox, this.getSpriteBox(enemy.spriteView, enemy.scale))) {
+                continue;
+            }
+
+            enemy.beginExplosion?.();
+            break;
+        }
     }
 
     hitEntity(projectile, projectileBox, enemy, enemyBox) {
@@ -109,13 +130,40 @@ export default class SpawnerSystem {
         }
 
         if (typeof enemy.stagger === 'function') {
-            enemy.stagger(0.33);
+            enemy.stagger(0.6);
         }
 
         projectile.destroy();
         this.player.removeProjectile(projectile);
 
         return true;
+    }
+
+    handleEnemyExplosion(enemy) {
+        if (!enemy?.special || enemy.special.type !== 'EXPLODE') {
+            return;
+        }
+
+        const explosionRange = enemy.special.explosionRange ?? enemy.special.range ?? 90;
+        const explosionDamage = enemy.special.damage ?? 10;
+
+        if (this.player?.sprite) {
+            const playerDistance = Math.hypot(this.player.sprite.x - enemy.x, this.player.sprite.y - enemy.y);
+
+            if (playerDistance <= explosionRange) {
+                this.player.takeDamage(explosionDamage);
+            }
+        }
+
+        for (const otherEnemy of this.enemies) {
+            if (!otherEnemy?.active || otherEnemy === enemy) continue;
+
+            const enemyDistance = Math.hypot(otherEnemy.x - enemy.x, otherEnemy.y - enemy.y);
+
+            if (enemyDistance <= explosionRange) {
+                otherEnemy.takeDamage(explosionDamage);
+            }
+        }
     }
 
     getSpriteBox(sprite, scale) {
@@ -153,6 +201,14 @@ export default class SpawnerSystem {
                 const frameCount = config.frameCount ?? 1;
                 this.enemyAttackFrames.set(config.type, this.createFrames(attackTexture, config.attackFrameCount ?? 1));
             } 
+
+            if (config.special?.explosionURL) {
+                const explosionTexture = await Assets.load(config.special.explosionURL);
+                this.enemyExplosionFrames.set(
+                    config.type,
+                    this.createFrames(explosionTexture, config.special.explosionFrameCount ?? 8)
+                );
+            }
         }
     }
 
@@ -176,11 +232,15 @@ export default class SpawnerSystem {
             this.enemies.push(enemy);
         }
 
+        enemy.onExplosion = (explodingEnemy) => this.handleEnemyExplosion(explodingEnemy);
+
         this.syncEnemyView(enemy);
     }
 
     syncEnemyView(enemy) {
         const animationFrames = this.enemyFrames.get(enemy.type);
+        const attackFrames = this.enemyAttackFrames.get(enemy.type);
+        const explosionFrames = this.enemyExplosionFrames.get(enemy.type);
 
         if (!animationFrames) return;
 
@@ -195,22 +255,56 @@ export default class SpawnerSystem {
             
         }
 
-        /*
-         * This is a bit hacky, better to hande this on the enemy with a proper way
-         */
-
         if (enemy.state === 'WINDUP') {
-            enemy.spriteView.textures = this.enemyAttackFrames.get(enemy.type);
-            enemy.spriteView.gotoAndPlay(3);
-            enemy.prevState = 'DASHING';
+            if (enemy.prevState !== 'WINDUP' || enemy.spriteView.textures !== attackFrames) {
+                enemy.spriteView.textures = attackFrames ?? animationFrames;
+                enemy.spriteView.animationSpeed = 0.16;
+                enemy.spriteView.loop = true;
+                enemy.spriteView.gotoAndPlay(3);
+            }
+
+            enemy.prevState = 'WINDUP';
         } else if (enemy.state === 'DASHING') {
-            enemy.spriteView.textures = this.enemyAttackFrames.get(enemy.type);
-            enemy.spriteView.gotoAndPlay(4);
+            if (enemy.prevState !== 'DASHING' || enemy.spriteView.textures !== attackFrames) {
+                enemy.spriteView.textures = attackFrames ?? animationFrames;
+                enemy.spriteView.animationSpeed = 0.16;
+                enemy.spriteView.loop = true;
+                enemy.spriteView.gotoAndPlay(4);
+            }
+
             enemy.prevState = 'DASHING';
-        } else if (enemy.prevState === 'DASHING') {
-            enemy.spriteView.textures = animationFrames;
-            console.log('back to idle'); // Debug log
-            enemy.prevState = 'IDLE';
+        } else if (enemy.state === 'STAGGER') {
+            if (enemy.spriteView.textures !== animationFrames) {
+                enemy.spriteView.textures = animationFrames;
+                enemy.spriteView.animationSpeed = 0.12;
+                enemy.spriteView.loop = true;
+            }
+
+            enemy.spriteView.tint = 0xFF6666;
+            enemy.prevState = 'STAGGER';
+        } else if (enemy.state === 'EXPLODING' && explosionFrames) {
+            if (enemy.prevState !== 'EXPLODING' || enemy.spriteView.textures !== explosionFrames) {
+                enemy.spriteView.textures = explosionFrames;
+                enemy.spriteView.animationSpeed = 0.18;
+                enemy.spriteView.loop = false;
+                enemy.spriteView.gotoAndPlay(0);
+            }
+
+            enemy.spriteView.tint = 0xFFFFFF;
+            enemy.prevState = 'EXPLODING';
+        } else {
+            if (enemy.prevState === 'DASHING' || enemy.prevState === 'EXPLODING' || enemy.spriteView.textures !== animationFrames) {
+                enemy.spriteView.textures = animationFrames;
+                enemy.spriteView.animationSpeed = 0.12;
+                enemy.spriteView.loop = true;
+                enemy.spriteView.gotoAndPlay(0);
+            }
+
+            if (enemy.state !== 'PREPARING') {
+                enemy.spriteView.tint = 0xFFFFFF;
+            }
+
+            enemy.prevState = enemy.state;
         }
 
         if (!enemy.spriteView.parent) {
