@@ -25,7 +25,21 @@ export default class RhinoLaserBehavior extends EnemyBehavior {
             case 'CHARGE_SPIN':
                 enemy.timer -= context.deltaSeconds;
                 enemy.lookAt(context.playerX, context.playerY);
-                enemy.moveToward(context.dx, context.dy, context.getDistance(), enemy.speed, context.deltaTime);
+                {
+                    const stopRange = enemy.special?.stopRange ?? 180;
+                    const distance = context.getDistance();
+
+                    if (distance > stopRange) {
+                        const movementScale = context.deltaTime / 60;
+                        const maxStep = enemy.speed * movementScale;
+                        const step = Math.min(maxStep, distance - stopRange);
+
+                        if (distance > 1) {
+                            enemy.x += (context.dx / distance) * step;
+                            enemy.y += (context.dy / distance) * step;
+                        }
+                    }
+                }
                 enemy.specialRotation += (enemy.special?.chargeSpinSpeed ?? 10) * context.deltaSeconds;
 
                 if (enemy.timer <= 0) {

@@ -73,6 +73,7 @@ export const ENEMY_DATA = {
         special: {
             type: 'RHINO_LASER',
             triggerRange: 220,
+            stopRange: 180,
             chargeDuration: 8,
             chargeSpinSpeed: 10,
             attackDuration: 1.2,
